@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forge Master — Clan Tech Tree Cost Calculator</title>
+<meta name="description" content="What every Clan Tech Tree node actually costs in gems, vials and real money — and how much of it your clan can realistically earn before the 8-week reset.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D0C0A;
+  --card:#17150F;
+  --card-2:#1E1B14;
+  --line:#2C2820;
+  --line-hi:#3E382C;
+  --text:#EFE6D5;
+  --muted:#9C9282;
+  --dim:#6E6659;
+  --amber:#E9B44C;
+  --amber-dim:#8A6A24;
+  --gem:#E2679F;
+  --vial:#69B87A;
+  --cash:#E0714A;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:Inter,-apple-system,system-ui,sans-serif;
+  font-size:15px;line-height:1.5;
+  padding:14px 0 60px;
+}
+.wrap{max-width:920px;margin:0 auto;padding:0 14px}
+.num{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.card+.card{margin-top:12px}
+
+/* hero */
+.eyebrow{
+  color:var(--amber);font-weight:700;font-size:11px;
+  letter-spacing:.24em;text-transform:uppercase;margin-bottom:8px;
+}
+h1{font-size:clamp(26px,6.4vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.lede{color:var(--muted);margin-top:8px;font-size:14px;max-width:62ch}
+.lede b{color:var(--text);font-weight:600}
+
+/* stat pills */
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.pill{
+  background:var(--card-2);border:1px solid var(--line);border-radius:999px;
+  padding:8px 14px;font-size:13px;color:var(--muted);white-space:nowrap;
+}
+.pill b{color:var(--text);font-weight:700;margin-left:5px}
+.pill b.gem{color:var(--gem)} .pill b.vial{color:var(--vial)} .pill b.cash{color:var(--cash)}
+
+/* labelled divider */
+.rule{display:flex;align-items:center;gap:12px;margin:22px 0 12px}
+.rule span{
+  color:var(--dim);font-size:11px;font-weight:600;
+  letter-spacing:.2em;text-transform:uppercase;white-space:nowrap;
+}
+.rule:after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* choice pills */
+.choices{display:flex;flex-wrap:wrap;gap:8px}
+.choice{
+  background:var(--card-2);border:1px solid var(--line);border-radius:10px;
+  color:var(--text);font:600 14px Inter,sans-serif;padding:9px 15px;cursor:pointer;
+}
+.choice:hover{border-color:var(--line-hi)}
+.choice[aria-pressed=true]{background:var(--amber);border-color:var(--amber);color:#100E09}
+.choice:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.hint{color:var(--muted);font-size:13px;margin-top:10px}
+.hint b{color:var(--amber);font-weight:700}
+
+/* tabs */
+.tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin-top:14px}
+.tab{
+  flex:1;background:transparent;border:0;border-radius:9px;
+  color:var(--muted);font:600 14px Inter,sans-serif;padding:10px 6px;cursor:pointer;
+}
+.tab[aria-selected=true]{background:var(--card-2);color:var(--text);box-shadow:inset 0 -2px 0 var(--amber)}
+.tab:focus-visible{outline:2px solid var(--amber)}
+
+/* sticky totals */
+.totals{
+  position:sticky;top:0;z-index:30;margin:14px 0;
+  background:rgba(13,12,10,.92);backdrop-filter:blur(8px);
+  border:1px solid var(--line);border-radius:12px;
+  display:grid;grid-template-columns:repeat(4,1fr);
+}
+.tcell{padding:10px 12px;border-left:1px solid var(--line)}
+.tcell:first-child{border-left:0}
+.tcell .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.tcell .v{font-size:clamp(15px,3.6vw,21px);font-weight:700;letter-spacing:-.01em;margin-top:2px}
+.v.gem{color:var(--gem)} .v.vial{color:var(--vial)} .v.cash{color:var(--cash)}
+
+/* section */
+.sec{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.sec-btn{
+  width:100%;display:flex;align-items:center;gap:10px;
+  background:transparent;border:0;padding:14px 16px;cursor:pointer;text-align:left;color:var(--text);
+}
+.sec-btn:hover{background:var(--card-2)}
+.sec-btn .name{font-weight:700;font-size:15px}
+.sec-btn .cnt{color:var(--dim);font-size:12px;font-weight:500}
+.sec-btn .spend{margin-left:auto;font-size:13px;color:var(--muted)}
+.sec-btn .spend b{color:var(--amber);font-weight:700}
+.chev{color:var(--dim);transition:transform .18s}
+.sec[open] .chev{transform:rotate(90deg)}
+.sec-body{border-top:1px solid var(--line)}
+
+.row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid rgba(44,40,32,.6)}
+.row:last-child{border-bottom:0}
+.row:hover{background:rgba(30,27,20,.5)}
+.row .info{min-width:0;flex:1}
+.row .n{font-weight:600;font-size:14px}
+.row .e{color:var(--dim);font-size:12px;margin-top:1px}
+.row .price{color:var(--muted);font-size:12px;text-align:right;white-space:nowrap}
+.row .price b{color:var(--gem);font-weight:700}
+.row .cost{width:78px;text-align:right;font-weight:700;font-size:14px;color:var(--amber)}
+.row .cost.z{color:var(--dim);font-weight:400}
+.lvl{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.lvl button{background:var(--card-2);border:0;color:var(--muted);width:30px;height:34px;font-size:16px;cursor:pointer}
+.lvl button:hover{color:var(--amber)}
+.lvl input{
+  width:46px;height:34px;background:var(--bg);border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);
+  color:var(--text);text-align:center;font:700 14px "JetBrains Mono",monospace;
+}
+.lvl input:focus{outline:1px solid var(--amber)}
+.tag{
+  display:inline-block;margin-left:6px;vertical-align:1px;
+  background:var(--amber-dim);color:var(--amber);border-radius:4px;
+  font-size:9px;font-weight:800;letter-spacing:.08em;padding:2px 5px;text-transform:uppercase;
+}
+
+/* reality */
+.fields{display:flex;flex-wrap:wrap;gap:12px}
+.f{flex:1;min-width:130px}
+.f label{display:block;color:var(--dim);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.f input{
+  width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;
+  color:var(--text);padding:9px 11px;font:700 15px "JetBrains Mono",monospace;
+}
+.f input:focus{outline:2px solid var(--amber);outline-offset:-1px;border-color:var(--amber)}
+.gauge{margin-top:16px;height:32px;border:1px solid var(--line);border-radius:9px;background:var(--bg);position:relative;overflow:hidden}
+.gauge .fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--vial);opacity:.85}
+.gauge .lbl{position:absolute;inset:0;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px}
+.verdict{margin-top:12px;color:var(--muted);font-size:14px}
+.verdict b{color:var(--text)}
+.verdict .bad{color:var(--cash)}
+
+/* receipt */
+.rl{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
+.rl b{color:var(--text);font-weight:700}
+.rl.total{border:0;padding-top:14px;font-size:clamp(17px,4.4vw,24px)}
+.rl.total b{color:var(--cash)}
+.note{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-left:2px solid var(--amber);border-radius:8px;color:var(--muted);font-size:13px}
+.note b{color:var(--text)}
+
+.share{display:flex;gap:8px;margin-top:12px}
+.share input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--muted);padding:9px 11px;font:400 12px "JetBrains Mono",monospace}
+footer{color:var(--dim);font-size:12px;line-height:1.7;margin-top:26px;text-align:center}
+[hidden]{display:none!important}
+@media(max-width:600px){
+  .totals{grid-template-columns:repeat(2,1fr)}
+  .tcell:nth-child(3){border-left:0}
+  .tcell:nth-child(n+3){border-top:1px solid var(--line)}
+  .row{flex-wrap:wrap;gap:8px}
+  .row .info{flex:1 0 100%}
+  .row .price{flex:1;text-align:left}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <div class="eyebrow">Forge Master · Clan Tech Tree</div>
+    <h1>Clan Tech Tree Cost Calculator</h1>
+    <p class="lede">Every node priced per level, the way the donation popup actually works. <b>1 gem = 1 donation. 2 vials = 1 donation.</b> Pick your levels, and see what the clan owes — in gems, in vials, and in money — before the whole thing wipes in 8 weeks.</p>
+    <div class="pills">
+      <span class="pill">Nodes<b id="p-nodes">0/59</b></span>
+      <span class="pill">Gems<b class="gem" id="p-gem">0</b></span>
+      <span class="pill">Vials<b class="vial" id="p-vial">0</b></span>
+      <span class="pill">Cost<b class="cash" id="p-usd">$0</b></span>
+    </div>
+  </div>
+
+  <div class="rule"><span>Where to start</span></div>
+  <div class="choices" id="presets">
+    <button class="choice" data-p="clear">Nothing</button>
+    <button class="choice" data-p="brawl">Brawl, 1 level</button>
+    <button class="choice" data-p="war">War package</button>
+    <button class="choice" data-p="econ">Vial economy</button>
+    <button class="choice" data-p="max">Max everything</button>
+  </div>
+  <p class="hint" id="hint">Clan War Damage and Health give <b>+100% per level</b> — every other node gives 1–5%. One level of each doubles your clan's brawl output for about the price of lunch.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-t="nodes">Nodes</button>
+    <button class="tab" role="tab" aria-selected="false" data-t="grind">Can you grind it?</button>
+    <button class="tab" role="tab" aria-selected="false" data-t="bill">The bill</button>
+  </div>
+
+  <div class="totals">
+    <div class="tcell"><div class="k">Donations</div><div class="v num" id="t-don">0</div></div>
+    <div class="tcell"><div class="k">Gems</div><div class="v gem num" id="t-gem">0</div></div>
+    <div class="tcell"><div class="k">Vials</div><div class="v vial num" id="t-vial">0</div></div>
+    <div class="tcell"><div class="k">Real money</div><div class="v cash num" id="t-usd">$0</div></div>
+  </div>
+
+  <div id="pane-nodes"></div>
+
+  <div id="pane-grind" hidden>
+    <div class="card">
+      <h2 style="font-size:17px;font-weight:700">What your clan actually earns</h2>
+      <p class="lede" style="margin-bottom:16px">Vials are the only currency you can earn — gems can only be bought. Put in your real numbers and see how far the grind gets you against the levels you picked.</p>
+      <div class="fields">
+        <div class="f"><label for="r-mem">Members</label><input type="number" id="r-mem" value="50" min="1" max="50"></div>
+        <div class="f"><label for="r-per">Vials/member/war</label><input type="number" id="r-per" value="70" min="0"></div>
+        <div class="f"><label for="r-mis">Mission vials/member/war</label><input type="number" id="r-mis" value="0" min="0"></div>
+        <div class="f"><label for="r-win">Clan win vials/war</label><input type="number" id="r-win" value="50" min="0"></div>
+        <div class="f"><label for="r-wars">Wars per cycle</label><input type="number" id="r-wars" value="8" min="1"></div>
+      </div>
+      <div class="gauge"><div class="fill" id="r-fill"></div><div class="lbl" id="r-lbl">Pick some levels first</div></div>
+      <p class="verdict" id="r-verdict"></p>
+      <div class="note"><b>Known good numbers:</b> a Tier-S++ war win pays 50 vials to the clan, a loss pays 20. The personal ladder tops out around 70 vials per player, and needs 3,000,000 points to clear. Mission payout scales with player level — nobody has posted it yet, so it defaults to zero.</div>
+    </div>
+  </div>
+
+  <div id="pane-bill" hidden>
+    <div class="card">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:12px">The bill</h2>
+      <div class="rl"><span>Selected levels</span><b class="num" id="b-don">0 donations</b></div>
+      <div class="rl"><span>Covered by grinding</span><b class="num" id="b-grind">0</b></div>
+      <div class="rl"><span>Shortfall — gems only</span><b class="num" id="b-gap">0</b></div>
+      <div class="rl"><span>Cheapest pack basket</span><b class="num" id="b-packs">—</b></div>
+      <div class="rl total"><span>You pay</span><b class="num" id="b-usd">$0</b></div>
+      <div class="note">Then it resets. <b>Every 8 weeks</b>, back to zero, and you pay again.</div>
+      <div class="rule"><span>Share this setup</span></div>
+      <div class="share">
+        <input id="s-url" readonly>
+        <button class="choice" id="s-copy">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Node costs read from the in-game donation popups. Gem packs: 60/$1.99 · 220/$6.99 · 800/$24.99 · 3,300/$99.99.<br>
+    Unofficial fan tool — not affiliated with Lessmore. Nothing you type leaves your browser.
+  </footer>
+</div>
+
+<script>
+/* gems = donations per level. vials = gems × 2. */
+const DATA=[
+ ["Power","Gear, pet and mount bonuses.",[
+  ["Weapon Mastery","Weapon bonus damage +5%",20,304],
+  ["Helmet Mastery","Helmet bonus health +5%",20,304],
+  ["Body Mastery","Armour bonus health +5%",20,304],
+  ["Shoe Mastery","Shoes bonus health +5%",20,304],
+  ["Glove Mastery","Gloves bonus damage +5%",20,304],
+  ["Belt Mastery","Belt bonus health +5%",20,304],
+  ["Necklace Mastery","Necklace bonus damage +5%",20,304],
+  ["Ring Mastery","Ring bonus damage +5%",20,304],
+  ["Skill Damage Mastery","Skill damage +5%",20,304],
+  ["Pet Damage Mastery","Pet bonus damage +5%",20,304],
+  ["Pet Health Mastery","Pet bonus health +5%",20,304],
+  ["Mount Damage Mastery","Mounts bonus damage +5%",20,304],
+  ["Mount Health Mastery","Mounts bonus health +5%",20,304]]],
+ ["Clan War","War point multipliers, brawl stats, reward boosts.",[
+  ["Forging Equipment","Forge war actions +4% points",10,243],
+  ["Summoning Skills","Skill summons +4% points",10,243],
+  ["Upgrading Skills","Skill upgrades +4% points",10,243],
+  ["Tech Tree Upgrades","Tech tree actions +4% points",10,243],
+  ["Spending on Forge","Forge spending +4% points",10,243],
+  ["Dungeon Key","Dungeon keys +4% points",10,243],
+  ["Hatching Eggs","Egg hatches +4% points",10,243],
+  ["Merging Pets","Pet merges +4% points",10,243],
+  ["Summoning Mounts","Mount summons +4% points",10,243],
+  ["Merging Mounts","Mount merges +4% points",10,243],
+  ["Clan War Day 1","Tuesday actions +4% points",10,405],
+  ["Clan War Day 2","Wednesday actions +4% points",10,405],
+  ["Clan War Day 3","Thursday actions +4% points",10,405],
+  ["Clan War Day 4","Friday actions +4% points",10,405],
+  ["Clan War Day 5","Saturday actions +4% points",10,405],
+  ["Clan War Day 6","Sunday brawl actions +4% points",10,405],
+  ["Clan War Damage","Attack &amp; brawl damage +100%",100,246,1],
+  ["Clan War Health","Attack &amp; brawl health +100%",100,246,1],
+  ["CW Personal Rewards","Personal war rewards +1%",10,1622],
+  ["CW Win Rewards","Clan war win rewards +1%",10,1622],
+  ["CW Lose Rewards","Clan war lose rewards +1%",10,1622]]],
+ ["Dungeons","Damage and health per dungeon. Zombie Rush drops vials.",[
+  ["Hammer Thief Damage","Hammer Thief damage +5%",10,973],
+  ["Hammer Thief Health","Hammer Thief health +5%",10,973],
+  ["Ghost Town Damage","Ghost Town damage +5%",10,487],
+  ["Ghost Town Health","Ghost Town health +5%",10,487],
+  ["Invasion Damage","Invasion damage +5%",10,487],
+  ["Invasion Health","Invasion health +5%",10,487],
+  ["Zombie Rush Damage","Zombie Rush damage +5%",10,487],
+  ["Zombie Rush Health","Zombie Rush health +5%",10,487]]],
+ ["Clan Tech Potions","The only nodes that pay themselves back.",[
+  ["Potions — Missions","+5% vials from clan missions",20,608],
+  ["Potions — Personal Rewards","+5% vials from personal war rewards",20,608],
+  ["Potions — Winning Rewards","+5% vials from war wins",20,608],
+  ["Potions — Losing Rewards","+5% vials from war losses",20,608]]],
+ ["Clan Missions","Mission combat stats and payout.",[
+  ["Clan Missions — Damage","Clan missions +5% damage",20,304],
+  ["Clan Missions — Health","Clan missions +5% health",20,304],
+  ["Clan Mission Rewards","Clan mission rewards +1%",10,1215]]],
+ ["Special","Auto Forge is the priciest bar in the tree.",[
+  ["Auto Forge","Hammers used at once +9",2,6080],
+  ["Forge Animation Speed","Forge animation speed +5%",20,608],
+  ["Movement Speed","Move speed +5%",20,608],
+  ["Attack Range","Attack range +1",3,4056]]],
+ ["Egg Timers","Hatch speed by rarity, 60 levels deep.",[
+  ["Common Egg Timer","Common hatch speed +5%",60,135],
+  ["Rare Egg Timer","Rare hatch speed +5%",60,135],
+  ["Epic Egg Timer","Epic hatch speed +5%",60,135],
+  ["Legendary Egg Timer","Legendary hatch speed +5%",60,135],
+  ["Ultimate Egg Timer","Ultimate hatch speed +5%",60,135],
+  ["Mythic Egg Timer","Mythic hatch speed +5%",60,135]]]
+];
+const PACKS=[[3300,99.99],[800,24.99],[220,6.99],[60,1.99]];
+const f=n=>n.toLocaleString("en-US");
+const money=n=>"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+function basket(g){
+  if(g<=0)return{cost:0,desc:"—"};
+  let left=g,cost=0,parts=[];
+  for(let i=0;i<PACKS.length;i++){
+    const[amt,pr]=PACKS[i];
+    const k=(i===PACKS.length-1)?Math.ceil(left/amt):Math.floor(left/amt);
+    if(k>0){cost+=k*pr;left-=k*amt;parts.push(k+"×"+f(amt));}
+    if(left<=0)break;
+  }
+  return{cost,desc:parts.join(" + ")};
+}
+
+const nodes=[];
+const pane=document.getElementById("pane-nodes");
+DATA.forEach((s,si)=>{
+  const [sname,snote,list]=s;
+  const d=document.createElement("details");
+  d.className="sec"; if(si<2) d.open=true;
+  d.innerHTML=`<summary class="sec-btn"><span class="chev">▸</span>
+    <span><span class="name">${sname}</span> <span class="cnt">· ${list.length} nodes</span></span>
+    <span class="spend"><b id="sp-${si}">0</b> don.</span></summary><div class="sec-body"></div>`;
+  const body=d.querySelector(".sec-body");
+  list.forEach((n,ni)=>{
+    const[name,eff,max,gem,star]=n;
+    const id=nodes.length;
+    nodes.push({si,max,gem,lvl:0,name});
+    const r=document.createElement("div");
+    r.className="row";
+    r.innerHTML=`<div class="info">
+        <div class="n">${name}${star?'<span class="tag">per level</span>':''}</div>
+        <div class="e">${eff} · max ${max}</div></div>
+      <div class="price"><b>${f(gem)}</b> gems<br><span style="color:var(--vial)">${f(gem*2)}</span> vials / lvl</div>
+      <div class="lvl">
+        <button type="button" data-step="-1" data-i="${id}" aria-label="minus">−</button>
+        <input type="number" id="i-${id}" data-i="${id}" min="0" max="${max}" value="0" aria-label="${name} level">
+        <button type="button" data-step="1" data-i="${id}" aria-label="plus">+</button>
+      </div>
+      <div class="cost num z" id="c-${id}">0</div>`;
+    body.appendChild(r);
+  });
+  pane.appendChild(d);
+});
+const MAX=nodes.reduce((a,n)=>a+n.max*n.gem,0);
+
+function calc(){
+  const subs=new Array(DATA.length).fill(0);
+  let don=0,used=0;
+  nodes.forEach((n,i)=>{
+    const d=n.lvl*n.gem; don+=d; subs[n.si]+=d; if(n.lvl)used++;
+    const c=document.getElementById("c-"+i);
+    c.textContent=f(d); c.className="cost num"+(d?"":" z");
+  });
+  subs.forEach((v,i)=>document.getElementById("sp-"+i).textContent=f(v));
+  const b=basket(don);
+  document.getElementById("t-don").textContent=f(don);
+  document.getElementById("t-gem").textContent=f(don);
+  document.getElementById("t-vial").textContent=f(don*2);
+  document.getElementById("t-usd").textContent=money(b.cost);
+  document.getElementById("p-nodes").textContent=used+"/"+nodes.length;
+  document.getElementById("p-gem").textContent=f(don);
+  document.getElementById("p-vial").textContent=f(don*2);
+  document.getElementById("p-usd").textContent=money(b.cost);
+  grind(don);
+  const code=nodes.map(n=>n.lvl).join(".");
+  location.hash=code;
+  document.getElementById("s-url").value=location.href;
+}
+function grind(don){
+  const g=id=>Math.max(0,+document.getElementById(id).value||0);
+  const vials=(g("r-mem")*g("r-per")+g("r-mem")*g("r-mis")+g("r-win"))*g("r-wars");
+  const earned=Math.floor(vials/2);
+  const pct=don?Math.min(100,earned/don*100):0;
+  document.getElementById("r-fill").style.width=pct+"%";
+  document.getElementById("r-lbl").textContent=don?pct.toFixed(1)+"% of your selection":"Pick some levels first";
+  const gap=Math.max(0,don-earned), b=basket(gap);
+  document.getElementById("r-verdict").innerHTML=
+    `That's <b>${f(vials)} vials</b> a cycle = <b>${f(earned)} donations</b> — `+
+    `<span class="bad">${(earned/MAX*100).toFixed(1)}%</span> of the complete tree `+
+    `(${f(MAX)} donations, ${money(basket(MAX).cost)}).`;
+  document.getElementById("b-don").textContent=f(don)+" donations";
+  document.getElementById("b-grind").textContent="−"+f(Math.min(earned,don));
+  document.getElementById("b-gap").textContent=f(gap);
+  document.getElementById("b-packs").textContent=b.desc;
+  document.getElementById("b-usd").textContent=money(b.cost);
+}
+function set(i,v){
+  const n=nodes[i];
+  n.lvl=Math.max(0,Math.min(n.max,Math.round(v)||0));
+  document.getElementById("i-"+i).value=n.lvl;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-step]");
+  if(b){set(+b.dataset.i,nodes[+b.dataset.i].lvl+ +b.dataset.step);calc();}
+});
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.i!==undefined&&t.tagName==="INPUT"){set(+t.dataset.i,+t.value);calc();}
+  else if(t.id&&t.id.indexOf("r-")===0)calc();
+});
+const P={
+  clear:()=>0,
+  max:n=>n.max,
+  brawl:n=>/^Clan War (Damage|Health)$/.test(n.name)?1:0,
+  war:n=>/^Clan War (Damage|Health)$/.test(n.name)?n.max
+        :/^Clan War Day (1|5|6)$/.test(n.name)?n.max:0,
+  econ:n=>/^Potions/.test(n.name)?n.max
+        :/(CW Personal Rewards|CW Win Rewards|Clan Mission Rewards)/.test(n.name)?n.max:0
+};
+document.querySelectorAll("[data-p]").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll("[data-p]").forEach(x=>x.setAttribute("aria-pressed","false"));
+    btn.setAttribute("aria-pressed","true");
+    const fn=P[btn.dataset.p];
+    nodes.forEach((n,i)=>set(i,fn(n)));
+    calc();
+  };
+});
+document.querySelectorAll(".tab").forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
+    t.setAttribute("aria-selected","true");
+    ["nodes","grind","bill"].forEach(k=>document.getElementById("pane-"+k).hidden=(k!==t.dataset.t));
+  };
+});
+document.getElementById("s-copy").onclick=()=>{
+  const i=document.getElementById("s-url");
+  navigator.clipboard?.writeText(i.value);
+  const b=document.getElementById("s-copy");b.textContent="Copied";setTimeout(()=>b.textContent="Copy",1200);
+};
+// restore from hash
+if(location.hash.length>1){
+  const parts=location.hash.slice(1).split(".");
+  if(parts.length===nodes.length)parts.forEach((v,i)=>set(i,+v));
+}
+calc();
+</script>
+</body>
+</html>
